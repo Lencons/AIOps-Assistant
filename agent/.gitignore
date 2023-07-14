@@ -1,0 +1,2 @@
+# make sure sensitive config files aren't managed
+openai-api.key
