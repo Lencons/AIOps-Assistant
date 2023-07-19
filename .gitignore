@@ -1,0 +1,7 @@
+# local configuration could have private keys
+assistant.yaml
+
+# development environment
+.venv
+.vscode
+__pycache__

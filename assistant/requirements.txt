@@ -1,0 +1,8 @@
+# Core application packages
+pyyaml
+
+# AI Model packages
+openai
+
+# Probe/Integration packages
+mysql-connector-python
