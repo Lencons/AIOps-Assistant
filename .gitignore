@@ -5,3 +5,4 @@ assistant.yaml
 .venv
 .vscode
 __pycache__
+*.log

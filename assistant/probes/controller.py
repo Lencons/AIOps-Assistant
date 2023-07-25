@@ -80,7 +80,7 @@ class ProbeController:
     #    list_function: Reference to the function that will provide the list
     #                   of callable functions.
     #    call_function: Referenct to the function call handler.
-    __probe_index = [
+    _probe_index = [
         {
             'name': 'database',
             'list_function': probes.database.function_list,
@@ -93,7 +93,7 @@ class ProbeController:
     # Each list item is a dictonary with the following values:
     #    probe:    The name of the probe to which the function belongs.
     #    function: Dictonary of the function definition
-    __function_index = []
+    _function_index = []
 
 
     def __init__(self) -> None:
@@ -107,15 +107,15 @@ class ProbeController:
         ----------
         None
         """
-        for probe in self.__probe_index:
+        for probe in self._probe_index:
             for probe_func in probe['list_function']():
-                self.__function_index.append({'probe': probe['name'], 'function': probe_func})
+                self._function_index.append({'probe': probe['name'], 'function': probe_func})
 
 
     # Search the probe_index for the requested probe name and return its
     # definition
-    def __get_probe(self, name: str) -> dict:
-        for probe in self.__probe_index:
+    def _get_probe(self, name: str) -> dict:
+        for probe in self._probe_index:
             if probe['name'] == name:
                 return probe
         raise ProbeNotFoundError(name)
@@ -123,8 +123,8 @@ class ProbeController:
 
     # Search the function_index for the requested function and return its
     # definition
-    def __get_function(self, name: str) -> dict:
-        for func in self.__function_index:
+    def _get_function(self, name: str) -> dict:
+        for func in self._function_index:
             if func['function']['name'] == name:
                 return func
         raise FunctionNotFoundError(name)
@@ -147,7 +147,7 @@ class ProbeController:
             List of dict for all functions provided by all probes
         """
         return_list = []
-        for probe in self.__probe_index:
+        for probe in self._probe_index:
             return_list = return_list + probe['list_function']()
         return return_list
 
@@ -180,8 +180,8 @@ class ProbeController:
         """
         try:
             # Get the probe to which this function belongs
-            probe_function = self.__get_function(function_name)
-            probe = self.__get_probe(probe_function['probe'])
+            probe_function = self._get_function(function_name)
+            probe = self._get_probe(probe_function['probe'])
 
             logger.debug(
                 'Calling {0}.{1}():\n{2}'.format(
