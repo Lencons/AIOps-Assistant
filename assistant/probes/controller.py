@@ -24,10 +24,37 @@ the listed function:
 import logging
 
 # Probe modules registered with the controller
-import probes.database
+import probes.database as Database
 
 logger = logging.getLogger(__name__)
 """Configure the default logger for the module."""
+
+_probe_index = [
+    { 'name': 'database', 'list_func': Database.tool_list },
+]
+
+def tool_list(probe_name: str = None) -> list:
+
+    tools = [
+        probe['list_func']()
+        for probe in _probe_index
+        if probe['name'] == probe_name or probe_name is None
+    ]
+
+    # Conver the list of lists into a singls list
+    tools = sum(tools, [])
+
+    if logger.isEnabledFor(logging.DEBUG):
+        logger.debug('Tool List ==>')
+        for tool in tools:
+            logger.debug(tool)
+
+    return tools
+
+
+
+
+
 
 
 class FunctionNotFoundError(Exception):
@@ -83,8 +110,8 @@ class ProbeController:
     _probe_index = [
         {
             'name': 'database',
-            'list_function': probes.database.function_list,
-            'call_function': probes.database.function_call,
+#            'list_function': probes.database.function_list,
+#            'call_function': probes.database.function_call,
         },
     ]
 

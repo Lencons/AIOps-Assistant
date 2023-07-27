@@ -1,207 +1,223 @@
-"""Probe for the integration with databases.
+"""Probe for integration with databases.
 
-This database probe provides the abstraction layer to integrating with
-database systems within the environment. This probe provides a standard
-set of callable functions to the probe controller which are then
-directed onto the correct database integration for the type of database
-being targeted.
+This database probe provides the Agent Tool objects for integrating with
+database systems within the environment.
 
+Tool Registration
+-----------------
+When the probe controller is initalising the Agent, it will call the
+tool_list() function to get a list of all BaseTool objects registered
+within this probe. To register a Tool for use by the agent, a instance
+of it must be added to the tool_index list within the tool_list()
+function.
 
-Callable Functions
-------------------
-The functions that the probe provides to the controller are registered
-within the functions list of the function_list() function. Each function
-is defined within the list as a dictonary of attributes that make up the
-callable function. Details of the structure of this function definition
-can be found..... to be created....
-
-The following callable functions are presented to the controller:
-    list_servers        - Provide a list of all known database servers.
-    list_database       - Provide a list of all known databases.
-
-    
-Registering an Integration
---------------------------
-Integrations are somehow registered......
+Note
+----
+    We are currently only returning staic data, work still need to be
+    done here to make realtime API calls out into the environmet.    
 """
+from random import randrange
+
+from langchain.tools import BaseTool
+
+from typing import Optional
 
 
-def function_list() -> list:
-    """Provide the list of all callable functions.
+# List of all the accepted database types
+_db_keys = [
+    'mysql',
+    'postgresql',
+    'mongodb',
+]
 
-    Callable functions are currently statically registered. This may
-    change at some stage which is why this is a function.
 
-    All functions that are registered with this controller are stored 
-    within the functions list variable which at this stage is just
-    returned to the controller.
+def _unknown_db_type(key: str) -> str:
+    return f'The provided database type {key} is not valid.'
 
-    Parameters
-    ----------
-    None
+
+def tool_list() -> list:
+    """Provide a list of all the tools implemented by the database probe.
+
+    Each Tool that is registered within the _db_keys global variable is
+    combined to create a list that is retured for the probe.
 
     Returns
     -------
     list
-        List of callable functions as dictonaries.
+        List of all registered BaseTool classes.
     """
-    functions = [
-        {
-            'name': 'database_list_servers',
-            'description': 'Get a list of all the known database servers',
-            'parameters': {
-                'type': 'object',
-                'properties': {
-                    'db_type': {
-                        'type': 'string',
-                        'enum': ['all', 'mysql', 'mongodb', 'postgresql'],
-                    },
-                },
-            },
-        },
-        {
-            'name': 'database_list_databases',
-            'description': 'Get a list of all the known databases',
-            'parameters': {
-                'type': 'object',
-                'properties': {
-                    'db_type': {
-                        'type': 'string',
-                        'enum': ['all', 'mysql', 'mongodb', 'postgresql'],
-                    },
-                    'server': {
-                        'type': 'string',
-                        'description': 'The name of the server the databases reside on',
-                    },
-                },
-            },
-        },
-        {
-            'name': 'database_health_check',
-            'description': 'Get the health state of the database',
-            'parameters': {
-                'type': 'object',
-                'properties': {
-                    'db_name': {
-                        'type': 'string',
-                        'description': 'The name of the database to health check',
-                    },
-                },
-                'required': ['db_name'],
-            },
-        },
+    tool_index = [
+        ListServers(),
+        ListDatabases(),
+        HealthCheck(),
     ]
-    return functions
+    return tool_index
 
 
-def list_servers(db_type: str = 'all') -> str:
-    """Provide a CSV list of all known database servers.
+class ListServers(BaseTool):
+    """Agent Tool to provide a list of database servers."""
+    name = 'Database - List Database Servers'
+    description = \
+        'Use this tool when you need to obtain a list of database server names. ' \
+        'If a database type is provided only servers linked to that type will be provided. ' \
+        'Accepted database types are ["MySQL", "MongoDB", "PostgreSQL"]. ' \
+        'The list of servers will be returned as CSV data with the following columns: ' \
+        '["Server Name", "Database Type", "Hostname"]'
 
-    The source of known database servers is currently an internal static
-    list, but should be a CMDB. If a db_type value is provided then only
-    servers running the supplied database type will be returned.
+    def _run(self, db_type: Optional[str] = '') -> str:
+        """Provide a list of database servers, filtered by type if required.
+        
+        A list of database server details are provided back to the Agent
+        in a string with the following CSV format:
 
-    Parameters
-    ----------
-    db_type
-        Only return database servers of the provided type or 'all'.
+            Server Name, Database Type, Hostname
 
-    Returns
-    -------
-    str
-        String formatted with database server details in CSV format.
-    """
-    servers = [
-        {'name': 'sr-dbs01', 'type': 'mysql', 'hostname': 'sr-dbs01.core.lennoxconsulting.com.au'},
-        {'name': 'sr-dbs02', 'type': 'mongodb', 'hostname': 'sr-dbs02.core.lennoxconsulting.com.au'},
-        {'name': 'sr-dbs03', 'type': 'postgresql', 'hostname': 'sr-dbs03.core.lennoxconsulting.com.au'},
-        {'name': 'sr-dbs04', 'type': 'mysql', 'hostname': 'sr-dbs04.lab.lennoxconsulting.com.au'},
-        {'name': 'sr-dbs04', 'type': 'postgresql', 'hostname': 'sr-dbs04.lab.lennoxconsulting.com.au'},
-    ]
+        If a filter is provided, it must be one of the known database
+        types within _db_keys. The passed filter string is converted to
+        lowercase to ensure casing doesn't fail tests.
 
-    # Initialise output with CSV header
-    output = "db_server,db_type,hostname\n"
-    for server in servers:
-        if (db_type == 'all' or db_type == server['type']):
-            output = output + f"{server['name']},{server['type']},{server['hostname']}\n"
-    return output
+        Parameters
+        ----------
+        db_type
+            Database type key to filter data on (Optional).
 
+        Returns
+        -------
+        str
+            String with CSV formatted data.
+        """
 
-def list_database(db_type: str = 'all', server: str = 'all') -> str:
-    """Provide a CSV list of all known databases.
+        servers = [
+            {'name': 'sr-dbs01', 'type': 'MySQL', 'hostname': 'sr-dbs01.core.lennoxconsulting.com.au'},
+            {'name': 'sr-dbs02', 'type': 'MongoDB', 'hostname': 'sr-dbs02.core.lennoxconsulting.com.au'},
+            {'name': 'sr-dbs03', 'type': 'PostgreSQL', 'hostname': 'sr-dbs03.core.lennoxconsulting.com.au'},
+            {'name': 'sr-dbs04', 'type': 'MySQL', 'hostname': 'sr-dbs04.lab.lennoxconsulting.com.au'},
+            {'name': 'sr-dbs04', 'type': 'PostgreSQL', 'hostname': 'sr-dbs04.lab.lennoxconsulting.com.au'},
+        ]
 
-    The source of known databases is currently an internal static list,
-    but should be a CMDB. If a db_type or server value is provided then
-    only database running on the supplied database type or server will
-    be returned.
+        # Input data cleanup
+        if db_type is None:
+            db_type = ''
+        db_type = db_type.lower()
 
-    Parameters
-    ----------
-    db_type
-        Only return database of the provided type or 'all'.
-    server
-        Only return database running on the provided server or 'all'.
+        # Validate the db_type value the LLM has provided us
+        if db_type != '' and db_type not in _db_keys:
+            return _unknown_db_type(db_type)
+        
+        # Initialise output with CSV header
+        output = "Server Name,Database Type,Hostname\n"
+        for server in servers:
+            if (db_type == '' or db_type == server['type']):
+                output = output + f"{server['name']},{server['type']},{server['hostname']}\n"
 
-    Returns
-    -------
-    str
-        String formatted with database details in CSV format.
-    """
-    databases = [
-        {'name': 'netbox', 'type': 'postgresql', 'server': 'sr-dbs03'},
-        {'name': 'netbox-test', 'type': 'postgresql', 'server': 'sr-dbs04'},
-        {'name': 'netbox-dev', 'type': 'postgresql', 'server': 'sr-dbs04'},
-        {'name': 'taiga', 'type': 'mysql', 'server': 'sr-dbs01'},
-        {'name': 'homeassistant', 'type': 'mysql', 'server': 'sr-dbs01'},
-        {'name': 'wordpress', 'type': 'mysql', 'server': 'sr-dbs01'},
-    ]
+        return output        
 
-    # Initialise output with CSV header.
-    output = "db_name,db_type,db_server\n"
-    for db in databases:
-        if ((db_type == 'all' or db_type == db['type'])
-            and (server == 'all' or server == db['server'])):
-            output = output + f"{db['name']},{db['type']},{db['server']}\n"
-    return output
-
-
-def function_call(function_name: str, function_args: dict) -> str:
-    """Call the registered function with the provided aruments.
+    def _arun(self, db_type: Optional[str]) -> str:
+        raise NotImplementedError("This tool does not support async")
     
-    Callable functions that are registered with this probe are executed
-    via this function. The provided function_name is matched against all
-    known probe callable functions and executed with the provided
-    function_args.
 
-    For each callable function, before the function handler is called
-    the provided function_args is validated to ensure that all required
-    information has been provided.
+class ListDatabases(BaseTool):
+    """Agent Tool to provide a list of databases."""
+    name = 'Database - List Databases'
+    description = \
+        'Use this tool when you need to obtain a list of databases. ' \
+        'If a [db_server] is provided then only database associated with that database server will be provided. ' \
+        'If a [db_type] is provided then only databases of that type will be provided. ' \
+        'Accepted database types are ["MySQL", "MongoDB", "PostgreSQL"]. ' \
+        'The list of servers will be returned as CSV data with the following columns: ' \
+        '["Database Name", "Database Type", "Database Server"]'
 
-    Parameters
-    ----------
-    function_name
-        Name of the callable function to be executed.
-    function_args
-        Dictonary containing the required argument parameters for the
-        callable function.
+    def _run(self,
+            db_server: Optional[str] = '',
+            db_type: Optional[str] = '',
+        ) -> str:
+        """Provide a list of databases, filtered by type/server if required.
+        
+        A list of database details are provided back to the Agent in a string
+        with the following CSV format:
 
-    Returns
-    -------
-    str
-        String containing the structed data from the function call.
-    """
-    function_return = ""
-    match function_name:
-        case 'database_list_servers':
-            function_return = list_servers(
-                                    function_args.get('db_type', 'all') )
-        case 'database_list_databases':
-            function_return = list_database(
-                                    function_args.get('db_type', 'all'),
-                                    function_args.get('server', 'all') )
-        case 'database_health_check':
-            function_return = "Healthy"
-        case _:
-            # raise an error?
-            print(f'ARH!!! Function not known!!: {function_name}')
-    return function_return
+            Database Name, Database Type, Database Server
+
+        If a db_type filter is provided, it must be one of the known database
+        types within _db_keys. All passed filter strings are converted to
+        lowercase to ensure casing doesn't fail tests.
+
+        Parameters
+        ----------
+        db_server
+            Server name to limit returned database information too (Optional).
+        db_type
+            Database type key to filter data on (Optional).
+
+        Returns
+        -------
+        str
+            String with CSV formatted data.
+        """
+
+        databases = [
+            {'name': 'netbox', 'type': 'PostgreSQL', 'server': 'sr-dbs03'},
+            {'name': 'netbox-test', 'type': 'PostgreSQL', 'server': 'sr-dbs04'},
+            {'name': 'netbox-dev', 'type': 'PostgreSQL', 'server': 'sr-dbs04'},
+            {'name': 'taiga', 'type': 'MySQL', 'server': 'sr-dbs01'},
+            {'name': 'homeassistant', 'type': 'MySQL', 'server': 'sr-dbs01'},
+            {'name': 'wordpress', 'type': 'MySQL', 'server': 'sr-dbs01'},
+        ]
+
+        # Input data cleanup
+        if db_server is None:
+            db_server = ''
+        db_server = db_server.lower()
+        if db_type is None:
+            db_type = ''
+        db_type = db_type.lower()
+
+        # Validate the db_type value the LLM has provided us
+        if db_type != '' and db_type not in _db_keys:
+            return _unknown_db_type(db_type)
+        
+        # Initialise output with CSV header.
+        output = "Database Name,Database Type,Database Server\n"
+        for db in databases:
+            if ((db_type == '' or db_type == db['type'].lower())
+                and (db_server == '' or db_server == db['server'].lower())):
+                output = output + f"{db['name']},{db['type']},{db['server']}\n"
+        return output
+    
+
+    def _arun(self,
+            db_server: Optional[str] = '',
+            db_type: Optional[str] = '',
+        ) -> str:
+        raise NotImplementedError("This tool does not support async")
+
+
+class HealthCheck(BaseTool):
+    """Agent Tool to provide an assessment on a databases operational health."""
+    name = 'Database - Health Check'
+    description = \
+        'Use this tool when you need to obtain the operational health of a database. ' \
+        'The name of a known database must be provided upon which the health check will be performed. ' \
+
+
+    def _run(self, db_name: str) -> str:
+        """Perform a health check assessment on a database.
+        
+        What constitues a health check needs to be worked out. For now
+        a random result is returned to provide some variance in testing.
+
+        Parameters
+        ----------
+        db_name
+            The name of the database to be assessed.
+
+        Returns
+        -------
+        str
+            Resulting health assessment.
+        """
+        return "Failed" if randrange(1, 3) == 1 else "Healthy"
+    
+
+    def _arun(self, db_name: str) -> str:
+        raise NotImplementedError("This tool does not support async")

@@ -46,7 +46,8 @@ def initalise_logging(log_level: int = None) -> None:
 
 
 def run_assistant():
-    conv = conversation.Conversation(model.OPENAI_GPT)
+    #conv = conversation.Conversation(model.OPENAI_GPT)
+    conv = conversation.Conversation('openai')
     prompt = "Assistant> "
     while True:
         message = input(prompt)
@@ -58,7 +59,7 @@ def run_assistant():
                     conv.reset()
                 case _:
                     response = conv.run_prompt(message)
-                    print(response['content'])
+                    print(response['output'])
 
 
 if __name__ == "__main__":
