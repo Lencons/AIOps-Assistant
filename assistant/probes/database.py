@@ -13,14 +13,17 @@ function.
 
 Note
 ----
-    We are currently only returning staic data, work still need to be
+    We are currently only returning staic data, work still needs to be
     done here to make realtime API calls out into the environmet.    
 """
+import logging
+
 from random import randrange
 
 from langchain.tools import BaseTool
 
-from typing import Optional
+logger = logging.getLogger(__name__)
+"""Configure the default logger for the module."""
 
 
 # List of all the accepted database types
@@ -64,7 +67,7 @@ class ListServers(BaseTool):
         'The list of servers will be returned as CSV data with the following columns: ' \
         '["Server Name", "Database Type", "Hostname"]'
 
-    def _run(self, db_type: Optional[str] = '') -> str:
+    def _run(self, db_type: str = '') -> str:
         """Provide a list of database servers, filtered by type if required.
         
         A list of database server details are provided back to the Agent
@@ -86,6 +89,7 @@ class ListServers(BaseTool):
         str
             String with CSV formatted data.
         """
+        global _db_keys
 
         servers = [
             {'name': 'sr-dbs01', 'type': 'MySQL', 'hostname': 'sr-dbs01.core.lennoxconsulting.com.au'},
@@ -112,7 +116,7 @@ class ListServers(BaseTool):
 
         return output        
 
-    def _arun(self, db_type: Optional[str]) -> str:
+    def _arun(self, db_type: str = '') -> str:
         raise NotImplementedError("This tool does not support async")
     
 
@@ -127,10 +131,7 @@ class ListDatabases(BaseTool):
         'The list of servers will be returned as CSV data with the following columns: ' \
         '["Database Name", "Database Type", "Database Server"]'
 
-    def _run(self,
-            db_server: Optional[str] = '',
-            db_type: Optional[str] = '',
-        ) -> str:
+    def _run(self, db_server: str = '', db_type: str = '') -> str:
         """Provide a list of databases, filtered by type/server if required.
         
         A list of database details are provided back to the Agent in a string
@@ -154,7 +155,8 @@ class ListDatabases(BaseTool):
         str
             String with CSV formatted data.
         """
-
+        global _db_keys
+        
         databases = [
             {'name': 'netbox', 'type': 'PostgreSQL', 'server': 'sr-dbs03'},
             {'name': 'netbox-test', 'type': 'PostgreSQL', 'server': 'sr-dbs04'},
@@ -162,6 +164,12 @@ class ListDatabases(BaseTool):
             {'name': 'taiga', 'type': 'MySQL', 'server': 'sr-dbs01'},
             {'name': 'homeassistant', 'type': 'MySQL', 'server': 'sr-dbs01'},
             {'name': 'wordpress', 'type': 'MySQL', 'server': 'sr-dbs01'},
+            {'name': 'wordpress-dev', 'type': 'MySQL', 'server': 'sr-dbs04'},
+            {'name': 'unifi', 'type': 'PostgreSQL', 'server': 'sr-dbs04'},
+            {'name': 'unifi-test', 'type': 'PostgreSQL', 'server': 'sr-dbs04'},
+            {'name': 'race-sim', 'type': 'MongoDB', 'server': 'sr-dbs02'},
+            {'name': 'race-sim-test', 'type': 'MongoDB', 'server': 'sr-dbs02'},
+            {'name': 'race-sim-dev', 'type': 'MongoDB', 'server': 'sr-dbs02'},
         ]
 
         # Input data cleanup
@@ -185,10 +193,7 @@ class ListDatabases(BaseTool):
         return output
     
 
-    def _arun(self,
-            db_server: Optional[str] = '',
-            db_type: Optional[str] = '',
-        ) -> str:
+    def _arun(self, db_server: str = '', db_type: str = '') -> str:
         raise NotImplementedError("This tool does not support async")
 
 

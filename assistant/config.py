@@ -31,7 +31,7 @@ import yaml
 import copy
 
 
-__assistant_config = None
+_assistant_config = None
 """Global configuration data for the Assistant."""
 
 
@@ -61,12 +61,12 @@ def load(config_file: str = None) -> str:
     str
         None value if successfully loaded, otherwise a error message.
     """
-    global __assistant_config
+    global _assistant_config
     config_yaml = None
 
     # If not initalised, set default values.
-    if __assistant_config is None:
-        __assistant_config = {
+    if _assistant_config is None:
+        _assistant_config = {
             'log_level': 'warn',
         }
 
@@ -88,7 +88,7 @@ def load(config_file: str = None) -> str:
                 config_yaml = yaml.safe_load(open(filename, 'r'))
 
         if config_yaml is not None:            
-            __assistant_config.update(config_yaml)
+            _assistant_config.update(config_yaml)
 
         return None
     
@@ -133,10 +133,10 @@ def check_value(key: str) -> bool:
     bool
         True if the key exists, otherwise False.
     """
-    if __assistant_config is None:
+    if _assistant_config is None:
         return False
     
-    key_dict = __assistant_config
+    key_dict = _assistant_config
     for k in key.split('.'):
         if k in key_dict:
             key_dict = key_dict[k]
@@ -145,7 +145,7 @@ def check_value(key: str) -> bool:
     return True
 
 
-def get_value(key: str) -> object:
+def get_value(key: str) -> str | dict:
     """Return the configuration set for the provided key.
     
     The configuration currently stored within __assistant_config is
@@ -189,17 +189,17 @@ def get_value(key: str) -> object:
     ValueError
         The configuration key was not found.
     """
-    if __assistant_config is None:
+    if _assistant_config is None:
         logger.error('No configuration has been loaded!')
         raise ValueError
     
-    key_dict = __assistant_config
+    key_dict = _assistant_config
     for k in key.split('.'):
         if k in key_dict:
             key_dict = key_dict[k]
         else:
             logger.error('Key "%s" not set in configuration [%s]', key, k)
-            logger.debug(__assistant_config)
+            logger.debug(_assistant_config)
             raise ValueError
     if isinstance(key_dict, dict):
         return copy.deepcopy(key_dict)

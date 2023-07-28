@@ -1,59 +1,56 @@
-"""Support for LLM models.
+"""Support for all AI/ML models the Assistant can use.
 
-This parent class provides the standard functions to which all child
-model classes should override.
+Module containing the entry point for all models supported by the Assistant.
 """
 import logging
+
+from langchain.chat_models.openai import ChatOpenAI
+
+import config
 
 logger = logging.getLogger(__name__)
 """Configure the default logger for the module."""
 
 
 # Constant literals for each defined LLM
-OPENAI_GPT = 'openai_gpt'
+OPENAI = 'openai'
 ALL_MODELS = [
-    OPENAI_GPT,
+    OPENAI,
 ]
 
-class Model:
-    """Parent class for all LLM models.
 
-    This parent class provides the standard functions to which all child
-    model classes should override.
+def openai() -> ChatOpenAI:
+    """Create a LangChain OpenAI chat model instance.
+    
+    Wrapper function to create an instance of the ChatOpenAI model
+    to be used for conversation.
+
+    Global configuration values required are:
+        openai:
+          model: 'model name'
+          temperature: float
+          token: 'API authentication key'
+
+    Returns
+    -------
+    ChatOpenAI
+        Instance of the OpenAI chat model.
     """
+    try:
+        openai_config = config.get_value('openai')
+    except ValueError:
+        logger.error('Missing OpenAI configuration!')
+        quit()
 
-    def __init__(self) -> None:
-        """Prepare the LLM for execution (skeleton).
-        
-        Prepare the object for model execution. The identifer of the model
-        is recorded for reference.
+    openai_token = openai_config.get('token', None)
+    if openai_token is None:
+        logger.critical('No API token has been provided!')
 
-        Parameters
-        ----------
-        model
-            Model identifer that the object is using.
-        """
-        self.model_name = 'Not Set'
+    openai_model = openai_config.get('model', 'gpt-3.5-turbo-0613')
+    openai_temp = float(openai_config.get('temperature', '0'))
 
-
-    def run_prompt(self, prompt: list, functions: list = []) -> dict:
-        """Execute the prompt on the LLM (skeleton).
-
-        The supplied prompt includes all multi-shot content as well as the
-        prompt to execute on the LLM.
-
-        Parameters
-        ----------
-        prompt
-            List of strings making up the multi-shot prompt
-        functions
-            List of callback function definitions
-
-        Returns
-        -------
-        dict
-            Dictionary containing the following values:
-                next_step   - next step in the model communication
-                message     - text response from the LLM
-        """
-        logger.error('Function not implemented for model.')
+    return ChatOpenAI(
+        model_name = openai_model,
+        temperature = openai_temp,
+        openai_api_key = openai_token,
+    )

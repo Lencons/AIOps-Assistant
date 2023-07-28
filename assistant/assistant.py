@@ -4,8 +4,6 @@ import logging
 import config
 import conversation
 
-import models.model as model
-
 logger = logging.getLogger('Assistant')
 """Configure the default logger for the module."""
 
@@ -13,8 +11,13 @@ logger = logging.getLogger('Assistant')
 def initalise_logging(log_level: int = None) -> None:
     """Initialise the logger at the provided logging level.
     
-    The default logging to the console in the stadard format is used.
-    This will need to be addressed at some stage.
+    The logging system is configured to write output to a file, by
+    default to the assistant.log file in the current working directory.
+    The following details can be configured within the global
+    configuration for the logging system:
+        log_level       - Valuse of: info, warn, error, debug
+        logfile         - Name and path to create the loging file
+        log_mode        - Logfile mode: truncate, append, rotate
 
     Parameters
     ----------
@@ -24,39 +27,63 @@ def initalise_logging(log_level: int = None) -> None:
     if log_level:
         set_level = log_level        
     else:
-        set_level = logging.DEBUG           # default level
-        if config.check_value('log_level'):
-            try:
-                set_level = config.get_value('log_level')
-            except:
-                pass
-
-    set_filename = 'assistant.log'          # default logfile name
-    if config.check_value('logfile'):
         try:
-            set_filename = config.get_value('logfile')
+            set_level = logging.WARN           # default level
+            match config.get_value('log_level'):
+                case 'info':
+                    set_level = logging.INFO
+                case 'warn':
+                    set_level = logging.WARN
+                case 'error':
+                    set_level = logging.ERROR
+                case 'debug':
+                    set_level = logging.DEBUG
+                case _:
+                    logger.error(
+                        'Invalid logging configuration: log_level: %s',
+                        config.get_value('log_level')
+                    )
         except:
             pass
+        
+    try:
+        set_mode = 'a'                          # default mode
+        match config.get_value('log_mode'):
+            case 'append':
+                set_mode = 'a'
+            case 'truncate':
+                set_mode = 'w'
+            case 'rotate':
+                logger.info('Logger mode "rotate" not implemented.')
+            case _:
+                logger.error(
+                    'Invalid logging configuration: log_mode: %s',
+                    config.get_value('log_mode')
+                )
+    except:
+        pass
+
+    try:
+        set_filename = config.get_value('logfile')
+    except:
+        set_filename = 'assistant.log'          # default logfile name
 
     logging.basicConfig(
         level = set_level,
         filename = set_filename,
-        filemode = 'w',
+        filemode = set_mode,
     )
 
 
 def run_assistant():
-    #conv = conversation.Conversation(model.OPENAI_GPT)
     conv = conversation.Conversation('openai')
     prompt = "Assistant> "
     while True:
         message = input(prompt)
-        if ((message is not None) and (message != "")):
+        if message is not None and message != '':
             match message:
                 case 'quit':
                     return
-                case 'reset':
-                    conv.reset()
                 case _:
                     response = conv.run_prompt(message)
                     print(response['output'])
@@ -67,7 +94,7 @@ if __name__ == "__main__":
 
     # parse parameters
 
-    initalise_logging(logging.DEBUG)
+    initalise_logging()
 
     # run assistant
     logging.info('Starting AIOps Assistant.')

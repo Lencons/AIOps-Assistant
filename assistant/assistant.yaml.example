@@ -1,7 +1,67 @@
+# Example Assistant configuration file.
+#
+# Rename/copy this file to assistant.yaml and modify it as required
+# for you implementation of the AIOps Assistant.
+#
+# NOTE:
+#   This file may contain private tokens and keys so should have
+#   the lowest file permissions possible (suggest: only owner r/w)
+#
+
+# Logging configuration
+# ---------------------
+#
+# The following configuration items are supported:
+#   log_level     - The minimum level at which messages are generated
+#                     Options: info, warn, error, debug
+#   log_mode      - At initalisation how is the log file treaded
+#                     Options:
+#                         append   - Retain any existing logfile and add
+#                                    new log entires to end of it.
+#                         truncate - Delete any existing logfile and start
+#                                    with a new file.
+#                         rotate   - Retain a history of log files, rotating
+#                                    any exising log file into the log
+#                                    history and starting a new logfile.
+#   logfile       - Filename and path of the logfile to use
+#
 log_level: warn
+log_mode: append
 logfile: assistant.log
 
-# Configuration for using the OpenAI API
+# LangChain Configuration
+# -----------------------
+#
+# LangChain provides the core processing workflow (chaining) of the
+# Assistant with its behaviour modifiable with the following configuration
+# valuse based on the required performance and model utilised.
+#
+# The following configuration items are supported:
+#   memory        - The number of previous prompts rememberd within
+#                   a conversation (3-5 is a good start)
+#   max_iterations - Loops the LLM Agent is allowed in generating the response
+#                   message. The LLM makes one decision each loop. (at least 5)
+#   verbose       - Prints what the LLM is thinking to the console, used for
+#                   development and debugging (False for general use)
+langchain:
+  memory: 5
+  max_iterations: 5
+  verbose: False
+
+# OpenAI GPT Configuration
+# ------------------------
+#
+# Configuration for using the OpenAI API when the "openai" model has been
+# selected.
+#
+# The following configuration items are supported:
+#   model         - The OpenAI LLM to use, 'gpt-3.5-turbo' is a good choice
+#   temperature   - Low temperatures stop the model from being creative,
+#                   we want it to be precise and not hallucinate. (0 is best)
+#   token         - A OpenAI API key is required to authenticate with the
+#                   service. THIS IS REQUIRED TO USE THIS MODEL!
+#                   API key => https://platform.openai.com/account/api-keys
 openai:
   model: 'gpt-3.5-turbo-0613'
+  temperature: 0
   token: 'secret token'
